@@ -11,7 +11,7 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
 });
 
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.system) {
+  ThemeModeNotifier() : super(ThemeMode.light) {
     _loadThemeMode();
   }
 
@@ -22,8 +22,11 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
       state = ThemeMode.light;
     } else if (savedMode == 'dark') {
       state = ThemeMode.dark;
-    } else {
+    } else if (savedMode == 'system') {
       state = ThemeMode.system;
+    } else {
+      // Fresh installs use the app's light botanical theme by default.
+      state = ThemeMode.light;
     }
   }
 

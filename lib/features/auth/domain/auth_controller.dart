@@ -4,16 +4,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/config/app_constants.dart';
 import '../../../core/errors/app_error.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../shared/models/user_profile.dart';
 import '../data/auth_repository.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
-  return const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-  );
+  return appSecureStorage;
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -81,20 +79,7 @@ class AuthController extends StateNotifier<AuthState> {
     );
     switch (result) {
       case Success<AuthResponse>(:final data):
-        if (data.sessionToken.trim().isEmpty || data.userId.trim().isEmpty) {
-          state = const AuthError(
-            ConfigurationError(
-              'Respons autentikasi tidak berisi sesi yang valid.',
-            ),
-          );
-          return false;
-        }
-        await _repo.saveSession(data);
-        state = AuthAuthenticated(
-          user: data.profile,
-          sessionToken: data.sessionToken,
-        );
-        return true;
+        return _acceptAuthentication(data);
       case Failure<AuthResponse>(:final error):
         state = AuthError(error);
         return false;
@@ -108,23 +93,59 @@ class AuthController extends StateNotifier<AuthState> {
     );
     switch (result) {
       case Success<AuthResponse>(:final data):
-        if (data.sessionToken.trim().isEmpty || data.userId.trim().isEmpty) {
+        return _acceptAuthentication(data);
+      case Failure<AuthResponse>(:final error):
+        state = AuthError(error);
+        return false;
+    }
+  }
+
+  /// Store the session and verify it with a protected endpoint before showing
+  /// the signed-in area. This prevents a successful-looking login followed by
+  /// every CRUD request failing because the token was not persisted/accepted.
+  Future<bool> _acceptAuthentication(AuthResponse response) async {
+    if (response.sessionToken.trim().isEmpty ||
+        response.userId.trim().isEmpty) {
+      state = const AuthError(
+        ConfigurationError('Respons autentikasi tidak berisi sesi yang valid.'),
+      );
+      return false;
+    }
+
+    try {
+      await _repo.saveSession(response);
+      if (!AppConstants.isDemoMode) {
+        final savedToken = await _repo.getSavedToken();
+        if (savedToken != response.sessionToken) {
+          await _repo.clearSession();
           state = const AuthError(
-            ConfigurationError(
-              'Respons autentikasi tidak berisi sesi yang valid.',
+            StorageError(
+              'Sesi gagal disimpan di perangkat. Coba masuk kembali.',
             ),
           );
           return false;
         }
-        await _repo.saveSession(data);
-        state = AuthAuthenticated(
-          user: data.profile,
-          sessionToken: data.sessionToken,
-        );
-        return true;
-      case Failure<AuthResponse>(:final error):
-        state = AuthError(error);
-        return false;
+      }
+
+      final profileResult = await _repo.getMe();
+      switch (profileResult) {
+        case Success<UserProfile>(:final data):
+          state = AuthAuthenticated(
+            user: data,
+            sessionToken: response.sessionToken,
+          );
+          return true;
+        case Failure<UserProfile>(:final error):
+          await _repo.clearSession();
+          state = AuthError(error);
+          return false;
+      }
+    } catch (_) {
+      await _repo.clearSession();
+      state = const AuthError(
+        StorageError('Tidak dapat memverifikasi sesi di perangkat. Coba lagi.'),
+      );
+      return false;
     }
   }
 

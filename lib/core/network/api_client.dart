@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../config/app_constants.dart';
 import '../errors/app_error.dart';
+import '../storage/secure_storage.dart';
 
 /// HTTP client configured for My Journal API (Neon Functions/Hono backend).
 /// Automatically attaches auth token and handles common error cases.
@@ -13,7 +14,7 @@ class ApiClient {
   final FlutterSecureStorage _storage;
 
   ApiClient({FlutterSecureStorage? storage})
-    : _storage = storage ?? const FlutterSecureStorage() {
+    : _storage = storage ?? appSecureStorage {
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConstants.apiBaseUrl,
@@ -130,7 +131,12 @@ class ApiClient {
         return const NetworkError();
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
-        if (statusCode == 401) return const UnauthorizedError();
+        if (statusCode == 401) {
+          return UnauthorizedError(
+            _extractErrorMessage(e.response?.data) ??
+                AppConstants.errorUnauthorized,
+          );
+        }
         if (statusCode == 404) return const NotFoundError();
         final message =
             _extractErrorMessage(e.response?.data) ??

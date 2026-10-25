@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_chip.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../shared/utils/profile_photo.dart';
 import '../../../shared/models/mood_entry.dart';
 import '../../auth/domain/auth_controller.dart';
 import '../../planner/domain/planner_controller.dart';
@@ -69,13 +70,16 @@ class HomeScreen extends ConsumerWidget {
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.primary,
-                child: Text(
-                  userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                backgroundImage: profileImageProvider(user?.photoUrl),
+                child: profileImageProvider(user?.photoUrl) == null
+                    ? Text(
+                        userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),

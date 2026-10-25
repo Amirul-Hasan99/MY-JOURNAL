@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/config/app_constants.dart';
 import '../../../core/errors/app_error.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../shared/models/user_profile.dart';
 
 /// Authentication state
@@ -84,14 +85,23 @@ class AuthRepository {
   final FlutterSecureStorage _storage;
 
   AuthRepository({required this.client, FlutterSecureStorage? storage})
-    : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? appSecureStorage;
 
   Future<Result<AuthResponse>> login(LoginRequest req) async {
-    return client.post(
+    final result = await client.post<AuthResponse>(
       '/api/auth/sign-in',
       data: {'email': req.email, 'password': req.password},
       fromJson: (json) => AuthResponse.fromJson(json as Map<String, dynamic>),
     );
+    // A 401 from sign-in means the credentials were rejected. It is not an
+    // expired app session; reserve UnauthorizedError for protected API calls.
+    if (result case Failure<AuthResponse>(:final error)
+        when error is UnauthorizedError) {
+      return const Failure<AuthResponse>(
+        ValidationError('Email atau kata sandi salah.'),
+      );
+    }
+    return result;
   }
 
   Future<Result<AuthResponse>> register(RegisterRequest req) async {
@@ -128,11 +138,7 @@ class AuthRepository {
   }) {
     return client.patch(
       '/api/me',
-      data: {
-        'display_name': displayName,
-        'bio': bio,
-        'photo_url': photoUrl,
-      },
+      data: {'display_name': displayName, 'bio': bio, 'photo_url': photoUrl},
       fromJson: (json) => UserProfile.fromJson(json as Map<String, dynamic>),
     );
   }

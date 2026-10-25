@@ -8,7 +8,7 @@ class AppConstants {
       'Plan Your Day. Capture Your Story. Grow Every Day.';
   static const String appSloganId =
       'Satu Aplikasi, Banyak Cerita Tentang Kamu.';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.5';
 
   // API Base URL — set via environment or config
   static const String apiBaseUrl = String.fromEnvironment(

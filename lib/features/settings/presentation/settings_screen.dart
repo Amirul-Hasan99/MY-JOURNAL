@@ -288,7 +288,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   title: const Text('Versi Aplikasi'),
                   trailing: Text(
-                    '1.0.0 (Build 1)',
+                    '${AppConstants.appVersion} (Build 6)',
                     style: AppTextStyles.caption,
                   ),
                 ),
@@ -300,7 +300,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     showAboutDialog(
                       context: context,
                       applicationName: 'My Journal',
-                      applicationVersion: '1.0.0',
+                      applicationVersion: AppConstants.appVersion,
                       applicationLegalese:
                           '© 2026 My Journal Team. All rights reserved.',
                     );
